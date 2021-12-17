@@ -1,6 +1,5 @@
 ---
-- name: install Docker
+- name: provision nginx on ec2 instance
   hosts: all
   roles:
-          - docker-container
-          - docker-nginx
+          - nginx

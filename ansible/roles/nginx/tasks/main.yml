@@ -1,27 +1,41 @@
 ---
-  - name: Creating volume
-    file:
-      path: /root/webpage
-      state: directory
+- name: Install the nginx package 
+  apt:
+    name: nginx 
+    state: present
+    become: yes
+ 
+- name: Create web root directory
+  file:
+    path: /var/www/html
+    state: directory
+    mode: 0755
+    recurse: yes
+ 
+- name: Copy custom index.html file 
+  copy:
+    src: index.html
+    dest: /var/www/html/index.html
+    mode: 0644
+ 
+- name: Edit Configuration in Nginx 
+  replace: 
+    path: /etc/nginx/nginx.conf
+    regexp: 'root         /usr/share/nginx/html;'
+    replace: 'root         /var/www/html/;'
+    backup: yes
+  become: yes
 
-  - name: Copy content of webpage to dockerhost
-    copy:
-      dest: "/root/webpage"
-      src: "index.html" 
+- name: start the nginx service
+  systemd: 
+    name: nginx 
+    state: started 
+    enabled: yes
+  become: yes
 
-  - name: pull docker image
-    docker_image:
-      name: nginx:latest
-      source: pull
-
-  - name: launch container 
-    docker_container:
-      name: nginx
-      image: nginx:latest
-      state: started
-      detach: yes
-      interactive: yes
-      ports:
-        - "8080:80"
-      volumes:
-        - /root/webpage/:/usr/local/apache2/htdocs
+- name: Create self-signed certificate, if configured.
+  command: >
+        openssl req -x509 -nodes -subj '/CN={{ vagrant_hostname }}' -days 365
+        -newkey rsa:4096 -sha256 -keyout {{ item.key }} -out {{ item.cert }}
+        creates={{ item.cert }}
+  with_items: "{{ self_signed_certs }}"
